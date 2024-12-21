@@ -2,14 +2,86 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 func parse() (float64, float64, int64) {
-	return 0.0, 0.0, 0
+	data, err := os.ReadFile("points.txt")
+	if err != nil {
+		panic("Failed to read file")
+	}
+
+	numCPU := runtime.NumCPU()
+	chunkSize := len(data) / numCPU
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var sum1, sum2 float64
+	var count int64
+
+	worker := func(start, end int) {
+		defer wg.Done()
+		var chunkSum1, chunkSum2 float64 = 0, 0
+		var chunkCount int64 = 0
+
+		lines := strings.Split(string(data[start:end]), "\n")
+
+		for i := 0; i < len(lines); i++ {
+			if lines[i] == "" {
+				continue
+			}
+
+			fields := strings.Split(lines[i], ",")
+			if len(fields) != 2 {
+				panic("Invalid line format")
+			}
+
+			val1, err1 := strconv.ParseFloat(strings.TrimSpace(fields[0]), 64)
+			val2, err2 := strconv.ParseFloat(strings.TrimSpace(fields[1]), 64)
+			if err1 != nil || err2 != nil {
+				panic("Failed to parse floats")
+			}
+
+			chunkSum1 += val1
+			chunkSum2 += val2
+			chunkCount++
+		}
+
+		mu.Lock()
+		sum1 += chunkSum1
+		sum2 += chunkSum2
+		count += chunkCount
+		mu.Unlock()
+	}
+
+	start := 0
+	end := 0
+	for i := 0; i < numCPU; i++ {
+		start = end
+		end = start + chunkSize
+		if i == numCPU-1 {
+			end = len(data)
+		} else {
+			for data[end] != '\n' {
+				end--
+			}
+		}
+
+		wg.Add(1)
+		go worker(start, end)
+	}
+
+	wg.Wait()
+
+	sum1 = math.Round(sum1*100) / 100
+	sum2 = math.Round(sum2*100) / 100
+	// fmt.Print(sum1, sum2, count)
+	return sum1, sum2, count
 }
 
 func compFloat(f1 float64, f2 float64) bool {
