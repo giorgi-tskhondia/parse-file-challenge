@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"os"
@@ -29,27 +30,24 @@ func parse() (float64, float64, int64) {
 		var chunkSum1, chunkSum2 float64 = 0, 0
 		var chunkCount int64 = 0
 
-		lines := strings.Split(string(data[start:end]), "\n")
+		lineStart := start
+		for i := start; i < end; i++ {
+			if data[i] == '\n' || i == end-1 {
+				line := data[lineStart:i]
+				lineStart = i + 1
 
-		for i := 0; i < len(lines); i++ {
-			if lines[i] == "" {
-				continue
+				commaIndex := bytes.IndexByte(line, ',')
+				if commaIndex == -1 {
+					continue
+				}
+
+				val1, _ := strconv.ParseFloat(strings.TrimSpace(string(line[:commaIndex])), 64)
+				val2, _ := strconv.ParseFloat(strings.TrimSpace(string(line[commaIndex+1:])), 64)
+
+				chunkSum1 += val1
+				chunkSum2 += val2
+				chunkCount++
 			}
-
-			commaIndex := strings.IndexByte(lines[i], ',')
-			if commaIndex == -1 {
-				continue
-			}
-
-			val1, err1 := strconv.ParseFloat(strings.TrimSpace(lines[i][:commaIndex]), 64)
-			val2, err2 := strconv.ParseFloat(strings.TrimSpace(lines[i][commaIndex+1:]), 64)
-			if err1 != nil || err2 != nil {
-				panic("Failed to parse floats")
-			}
-
-			chunkSum1 += val1
-			chunkSum2 += val2
-			chunkCount++
 		}
 
 		mu.Lock()
@@ -80,7 +78,7 @@ func parse() (float64, float64, int64) {
 
 	sum1 = math.Round(sum1*100) / 100
 	sum2 = math.Round(sum2*100) / 100
-	// fmt.Print(sum1, sum2, count)
+	// fmt.Println(sum1, sum2, count)
 	return sum1, sum2, count
 }
 
