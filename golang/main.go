@@ -36,13 +36,13 @@ func parse() (float64, float64, int64) {
 				continue
 			}
 
-			fields := strings.Split(lines[i], ",")
-			if len(fields) != 2 {
-				panic("Invalid line format")
+			commaIndex := strings.IndexByte(lines[i], ',')
+			if commaIndex == -1 {
+				continue
 			}
 
-			val1, err1 := strconv.ParseFloat(strings.TrimSpace(fields[0]), 64)
-			val2, err2 := strconv.ParseFloat(strings.TrimSpace(fields[1]), 64)
+			val1, err1 := strconv.ParseFloat(strings.TrimSpace(lines[i][:commaIndex]), 64)
+			val2, err2 := strconv.ParseFloat(strings.TrimSpace(lines[i][commaIndex+1:]), 64)
 			if err1 != nil || err2 != nil {
 				panic("Failed to parse floats")
 			}
