@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 	"os"
@@ -11,6 +10,10 @@ import (
 	"sync"
 	"time"
 )
+
+func toFixed(arg float64) float64 {
+	return math.Round(arg*100) / 100
+}
 
 func parse() (float64, float64, int64) {
 	data, err := os.ReadFile("points.txt")
@@ -27,26 +30,32 @@ func parse() (float64, float64, int64) {
 
 	worker := func(start, end int) {
 		defer wg.Done()
-		var chunkSum1, chunkSum2 float64 = 0, 0
-		var chunkCount int64 = 0
+		var chunkSum1, chunkSum2 float64
+		var chunkCount int64
+		var isFirst bool = true
 
 		lineStart := start
 		for i := start; i < end; i++ {
-			if data[i] == '\n' || i == end-1 {
-				line := data[lineStart:i]
-				lineStart = i + 1
-
-				commaIndex := bytes.IndexByte(line, ',')
-				if commaIndex == -1 {
+			if data[i] == '\n' || data[i] == ',' || i == end-1 {
+				delta := 0
+				if i == end-1 {
+					delta = 1
+				}
+				line := data[lineStart:(i + delta)]
+				if len(line) == 0 {
 					continue
 				}
+				lineStart = i + 1
 
-				val1, _ := strconv.ParseFloat(strings.TrimSpace(string(line[:commaIndex])), 64)
-				val2, _ := strconv.ParseFloat(strings.TrimSpace(string(line[commaIndex+1:])), 64)
+				val, _ := strconv.ParseFloat(strings.TrimSpace(string(line)), 64)
 
-				chunkSum1 += val1
-				chunkSum2 += val2
-				chunkCount++
+				if isFirst {
+					chunkSum1 += val
+				} else {
+					chunkSum2 += val
+					chunkCount++
+				}
+				isFirst = !isFirst
 			}
 		}
 
@@ -76,8 +85,8 @@ func parse() (float64, float64, int64) {
 
 	wg.Wait()
 
-	sum1 = math.Round(sum1*100) / 100
-	sum2 = math.Round(sum2*100) / 100
+	sum1 = toFixed(sum1)
+	sum2 = toFixed(sum2)
 	// fmt.Println(sum1, sum2, count)
 	return sum1, sum2, count
 }
