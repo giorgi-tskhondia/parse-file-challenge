@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"os"
@@ -13,6 +14,23 @@ import (
 
 func toFixed(arg float64) float64 {
 	return math.Round(arg*100) / 100
+}
+
+func parseFloat(float []byte) float64 {
+	positive := true
+	if float[0] == '-' {
+		positive = false
+		float = float[1:]
+	}
+	l := len(float)
+	n := int(float[l-1]-48) + int(float[l-2]-48)*10 + int(float[l-4]-48)*100
+	if len(float) > 4 {
+		n += int(float[l-5]-48) * 1000
+	}
+	if !positive {
+		n = -n
+	}
+	return float64(n) / 100
 }
 
 func parse() (float64, float64, int64) {
@@ -47,7 +65,7 @@ func parse() (float64, float64, int64) {
 				}
 				lineStart = i + 1
 
-				val, _ := strconv.ParseFloat(strings.TrimSpace(string(line)), 64)
+				val := parseFloat(bytes.TrimSpace(line))
 
 				if isFirst {
 					chunkSum1 += val
